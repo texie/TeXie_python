@@ -7,12 +7,11 @@ from twisted.protocols.basic import LineReceiver
 
 import random
 import re
+import socket
 import socketserver
 import string
 import threading
 import time
-
-__all__ = ["TeXieGroundstation"]
 
 class Protocol(LineReceiver):
 	isLeaf = True
@@ -90,8 +89,10 @@ class ProtocolFactory(Factory):
 
 
 class TeXieGroundstation:
-	def __init__(self, apikey, secret, cluster_adresses="api.texie.io"):
-		self.client = TexieClient(apikey, secret, server=cluster_adresses)
+	def __init__(self, apikey, secret, server=None):
+		if server is None:
+			server = socket.gethostbyname_ex("api.texie.io")[2]
+		self.client = TexieClient(apikey, secret, server=server)
 		self.client.run()
 		self.threading_server = None
 		while not self.client.connected():
@@ -116,10 +117,27 @@ def work(tg):
 		time.sleep(30)
 
 if __name__ == "__main__":
-	tg = TeXieGroundstation("demo", "demo")
-	cf = ProtocolFactory(tg)
-	reactor.listenTCP(34567, cf)
+	"""#cluster_adresses = ("46.232.251.142", "37.120.164.104")
+	tg = TeXieGroundstation("demo", "demo")# , cluster_adresses)
+	tg.client.run()
+	threading.Thread(target=sec_info, daemon=True, args=(tg.client,)).start()
+
+	#cf = ProtocolFactory(tg)
+	#reactor.listenTCP(34567, cf)
+	threading.Thread(target=work, daemon=True, args=(tg,)).start()
+	#threading.Thread(target=reactor.run, daemon=True).start()
+	reactor.run()"""
+
+	cluster_adresses = ("46.232.251.142", "37.120.164.104")
+	#tg = TeXieGroundstation("demo", "demo")#, cluster_adresses)
+	tg = TeXieGroundstation("demo", "demo")#, "api.texie.io")
+	print(1)
 
 	threading.Thread(target=sec_info, daemon=True, args=(tg.client,)).start()
+
+	cf = ProtocolFactory(tg)
+	reactor.listenTCP(34567, cf)
 	threading.Thread(target=work, daemon=True, args=(tg,)).start()
+	#threading.Thread(target=reactor.run, daemon=True).start()
 	reactor.run()
+
